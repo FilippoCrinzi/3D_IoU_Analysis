@@ -10,10 +10,10 @@ def create_bounding_box(csv_file=None):
     points = df[['x', 'y', 'z']].to_numpy()
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
-    obb = pcd.get_oriented_bounding_box()
-    obb.color = (1, 0, 0)
+    obbox = pcd.get_oriented_bounding_box()
+    obbox.color = (1, 0, 0)
 
-    return obb
+    return obbox
 
 
 # Function to compute the region where shoot the points

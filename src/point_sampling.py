@@ -1,5 +1,6 @@
 import numpy as np
 import open3d as o3d
+import trimesh
 
 
 def generate_random_points_bbox(bbox, num_points):
@@ -18,7 +19,6 @@ def is_point_inside_mesh(mesh, point):
     direction = np.array([1.0, 0.0, 0.0])
 
     rays = o3d.core.Tensor([np.concatenate([origin, direction])], dtype=o3d.core.Dtype.Float32)
-    # TODO: fix problem with mercedes obj file
     ans = scene.cast_rays(rays)
 
     t_hit = ans['t_hit'].numpy()
@@ -34,5 +34,4 @@ def is_point_inside_bbox(bbox, point):
     # Define the min and max bounds of the bounding box
     min_bound = bbox.extent * -0.5
     max_bound = bbox.extent * 0.5
-
     return np.all(point_local >= min_bound) and np.all(point_local <= max_bound)
