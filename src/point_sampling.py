@@ -10,7 +10,6 @@ def generate_random_points_bbox(bbox, num_points):
     points = np.random.uniform(low=min_bound, high=max_bound, size=(num_points, 3))
     return points
 
-
 def is_point_inside_mesh(mesh, point):
     triangle_mesh = o3d.t.geometry.TriangleMesh.from_legacy(mesh)
     scene = o3d.t.geometry.RaycastingScene()
@@ -25,7 +24,6 @@ def is_point_inside_mesh(mesh, point):
     valid_intersections = t_hit < float('inf')
     num_intersections = valid_intersections.sum()
     return num_intersections % 2 == 1
-
 
 def is_point_inside_bbox(bbox, point):
     point = np.array(point)
