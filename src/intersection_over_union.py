@@ -21,6 +21,7 @@ def iou_mesh_bounding_box(mesh, bbox, points):
             union += 1
     return intersection / union
 
+
 def iou_for_bounding_box(bbox1, bbox2, points):
     intersection = 0
     union = 0
@@ -34,6 +35,7 @@ def iou_for_bounding_box(bbox1, bbox2, points):
             union += 1
     return intersection / union
 
+
 def iou_for_mesh(mesh1, mesh2, points):
     intersection = 0
     union = 0
@@ -46,6 +48,7 @@ def iou_for_mesh(mesh1, mesh2, points):
         if inside_mesh1 or inside_mesh2:
             union += 1
     return intersection / union
+
 
 #TODO: da rivedere iou_for_frame
 def iou_for_frame(path_obj, path_trajectories, path_point_cloud, frame, num_points):
@@ -80,6 +83,7 @@ def iou_for_frame(path_obj, path_trajectories, path_point_cloud, frame, num_poin
     o3d.visualization.draw_geometries([hull, bbox, union_bbox, point_cloud_random, point])
     return iou
 
+# funzione che calcola l'IoU delle forme allineate per un singolo frame
 def align_iou_for_frame(path_obj, path_point_cloud, num_points):
     mesh = o3d.io.read_triangle_mesh(path_obj)
     bbox = sg.create_bounding_box(path_point_cloud)
@@ -95,8 +99,11 @@ def align_iou_for_frame(path_obj, path_point_cloud, num_points):
     point_cloud_random = o3d.geometry.PointCloud()
     point_cloud_random.points = o3d.utility.Vector3dVector(random_points)
     iou = iou_mesh_bounding_box(hull, bbox, random_points)
+    coordinates = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0, origin=[0, 0, 0])
+    #o3d.visualization.draw_geometries([hull, bbox, union_bbox, coordinates, point_cloud_random])
     return iou
 
+# funzione che calcola l'IoU delle forme allineate per tutti i frame del dataset
 def align_iou(path_obj, path_point_cloud_dir, num_points):
     point_cloud_files = sorted(
         [f for f in os.listdir(path_point_cloud_dir) if f.endswith('.csv')]
