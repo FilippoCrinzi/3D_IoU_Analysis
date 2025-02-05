@@ -4,7 +4,9 @@ import numpy as np
 import shape_generator as sg
 import point_sampling as ps
 import os
+import utils
 import matplotlib.pyplot as plt
+from utils import extract_time_number
 
 
 def iou_mesh_bounding_box(mesh, bbox, points):
@@ -51,7 +53,7 @@ def iou_for_mesh(mesh1, mesh2, points):
 
 
 #TODO: da rivedere iou_for_frame
-def iou_for_frame(path_obj, path_trajectories, path_point_cloud, frame, num_points):
+def iou_for_frame(path_obj, path_trajectories, path_point_cloud, frame, num_points, visualize):
     mesh = o3d.io.read_triangle_mesh(path_obj)
     bbox = sg.create_bounding_box(path_point_cloud)
     center_bbox = bbox.get_center()
@@ -78,17 +80,18 @@ def iou_for_frame(path_obj, path_trajectories, path_point_cloud, frame, num_poin
     point_cloud_random.points = o3d.utility.Vector3dVector(random_points)
     hull, _ = mesh.compute_convex_hull()
     iou = iou_mesh_bounding_box(hull, bbox, random_points)
-
-    print("iou frame1 -->", iou)
-    o3d.visualization.draw_geometries([hull, bbox, union_bbox, point_cloud_random, point])
+    if visualize:
+        print("iou frame -->", iou)
+        o3d.visualization.draw_geometries([hull, bbox, union_bbox, point_cloud_random, point])
     return iou
 
+
 # funzione che calcola l'IoU delle forme allineate per un singolo frame
-def align_iou_for_frame(path_obj, path_point_cloud, num_points):
+def align_iou_for_frame(path_obj, path_point_cloud, num_points, visualize):
     mesh = o3d.io.read_triangle_mesh(path_obj)
     bbox = sg.create_bounding_box(path_point_cloud)
 
-    sg.align_mesh_to_origin(mesh)
+    sg.align_mesh_mercedes_to_origin(mesh)
     sg.align_bbox_to_origin(bbox)
 
     hull, _ = mesh.compute_convex_hull()
@@ -99,24 +102,71 @@ def align_iou_for_frame(path_obj, path_point_cloud, num_points):
     point_cloud_random = o3d.geometry.PointCloud()
     point_cloud_random.points = o3d.utility.Vector3dVector(random_points)
     iou = iou_mesh_bounding_box(hull, bbox, random_points)
-    coordinates = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0, origin=[0, 0, 0])
-    #o3d.visualization.draw_geometries([hull, bbox, union_bbox, coordinates, point_cloud_random])
+    if visualize:
+        coordinates = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0, origin=[0, 0, 0])
+        o3d.visualization.draw_geometries([mesh, bbox, union_bbox, coordinates, point_cloud_random])
     return iou
+
 
 # funzione che calcola l'IoU delle forme allineate per tutti i frame del dataset
 def align_iou(path_obj, path_point_cloud_dir, num_points):
     point_cloud_files = sorted(
-        [f for f in os.listdir(path_point_cloud_dir) if f.endswith('.csv')]
+        [f for f in os.listdir(path_point_cloud_dir) if f.endswith('.csv')],key=extract_time_number
     )
     iou_values = []
     frame = []
     print("\nRisultati IoU per tutti i frame:")
     for k, file_name in enumerate(point_cloud_files, start=1):
         file_path = os.path.join(path_point_cloud_dir, file_name)
-        iou_value = align_iou_for_frame(path_obj, file_path, num_points)
+        iou_value = align_iou_for_frame(path_obj, file_path, num_points, False)
         iou_values.append(iou_value)
         frame.append(k)
         print(f"Frame: {k} --> IoU: {iou_value}")
     tl.plot_iou_results(frame, iou_values, num_points)
     plt.show()
+    visualize = align_iou_for_frame(path_obj, file_path, num_points, True)
     return iou_values
+
+
+def align_iou_ellipsoid_for_frame(path_obj, path_point_cloud, num_points, visualize):
+    mesh = o3d.io.read_triangle_mesh(path_obj)
+    ellipsoid = sg.create_ellipsoid_from_point_cloud(path_point_cloud)
+    bbox = sg.create_bounding_box(path_point_cloud)
+    sg.align_bbox_to_origin(bbox)
+    sg.align_mesh_mercedes_to_origin(mesh)
+    sg.align_ellipsoid_to_origin(ellipsoid)
+    wireframe = o3d.geometry.LineSet.create_from_triangle_mesh(ellipsoid)
+    wireframe.paint_uniform_color([1, 0, 0])
+    hull, _ = mesh.compute_convex_hull()
+    union_bbox = sg.compute_bounding_box_union_mesh(mesh, ellipsoid)
+    min_bound = union_bbox.get_min_bound()
+    max_bound = union_bbox.get_max_bound()
+    random_points = ps.generate_random_points_bbox((min_bound, max_bound), num_points)
+    point_cloud_random = o3d.geometry.PointCloud()
+    point_cloud_random.points = o3d.utility.Vector3dVector(random_points)
+    iou = iou_for_mesh(hull, ellipsoid, random_points)
+    if visualize:
+        print("iou ellipsoid-->", iou)
+        coordinates = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0, origin=[0, 0, 0])
+        o3d.visualization.draw_geometries([mesh, wireframe, union_bbox, coordinates, point_cloud_random])
+    return iou
+
+
+def align_iou_ellipsoid(path_obj, path_point_cloud_dir, num_points):
+    point_cloud_files = sorted(
+        [f for f in os.listdir(path_point_cloud_dir) if f.endswith('.csv')], key=extract_time_number
+    )
+    iou_values = []
+    frame = []
+    print("\nRisultati IoU per tutti i frame:")
+    for k, file_name in enumerate(point_cloud_files, start=1):
+        file_path = os.path.join(path_point_cloud_dir, file_name)
+        iou_value = align_iou_ellipsoid_for_frame(path_obj, file_path, num_points, False)
+        iou_values.append(iou_value)
+        frame.append(k)
+        print(f"Frame: {k} --> IoU: {iou_value}")
+    tl.plot_iou_results(frame, iou_values, num_points)
+    plt.show()
+    visualize = align_iou_ellipsoid_for_frame(path_obj, file_path, num_points, True)
+    return iou_values
+
