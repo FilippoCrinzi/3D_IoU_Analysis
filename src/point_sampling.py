@@ -1,6 +1,5 @@
 import numpy as np
 import open3d as o3d
-import trimesh
 
 
 def generate_random_points_bbox(bbox, num_points):

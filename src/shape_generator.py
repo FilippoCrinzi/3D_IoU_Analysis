@@ -2,6 +2,17 @@ import open3d as o3d
 import pandas as pd
 import numpy as np
 
+def visualize_bbox(csv_file=None):
+    column_names = ['x', 'y', 'z']
+    df = pd.read_csv(csv_file, header=None, names=column_names)
+    points = df[['x', 'y', 'z']].to_numpy()
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+    obbox = pcd.get_oriented_bounding_box()
+    obbox.color = (1, 0, 0)
+    o3d.visualization.draw_geometries([pcd, obbox])
+    return obbox
+
 
 def create_bounding_box(csv_file=None):
     column_names = ['x', 'y', 'z']
@@ -90,42 +101,11 @@ def align_bbox_to_origin(bbox):
 
 
 def align_mesh_mercedes_to_origin(mesh):
-    translation = -mesh.get_center()
+    translation = np.array([0, 0, 0])-mesh.get_center()
     mesh.translate(translation)
     pi_mezzi = np.radians(90)
     rotation_matrix = mesh.get_rotation_matrix_from_xyz([pi_mezzi, pi_mezzi, 0])
     mesh.rotate(rotation_matrix, center=mesh.get_center())
-
-
-#prova funzioni per creare ellissoide
-def create_ellipsoid_from_bounding_box(csv_file=None):
-    bbox = create_bounding_box(csv_file)
-    column_names = ['x', 'y', 'z']
-    df = pd.read_csv(csv_file, header=None, names=column_names)
-    points = df[['x', 'y', 'z']].to_numpy()
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
-    center = bbox.get_center()
-    extents = bbox.extent
-    a, b, c = extents / 2
-    # Crea una sfera unitaria
-    sphere = o3d.geometry.TriangleMesh.create_sphere(radius=1.0, resolution=50)
-
-    # Scala la sfera per trasformarla in un ellissoide
-    sphere.scale(1.0, center=(0, 0, 0))  # Reset dello scaling
-    scaling_matrix = np.diag([a, b, c, 1])  # Matrice di scaling
-    sphere.transform(scaling_matrix)  # Scala la sfera
-
-    # Trasla l'ellissoide al centro della bounding box
-    sphere.translate(center)
-
-    # Liscia la mesh e aggiungi normali
-    sphere.paint_uniform_color(np.array([0, 0, 1], dtype=np.float64))
-    sphere.compute_vertex_normals()
-    wireframe = o3d.geometry.LineSet.create_from_triangle_mesh(sphere)
-    wireframe.paint_uniform_color([0.5, 0.5, 0.5])
-    #o3d.visualization.draw_geometries([pcd, wireframe, bbox])
-    return sphere
 
 
 def create_ellipsoid_from_point_cloud(csv_file=None):
@@ -133,6 +113,7 @@ def create_ellipsoid_from_point_cloud(csv_file=None):
     column_names = ['x', 'y', 'z']
     df = pd.read_csv(csv_file, header=None, names=column_names)
     points = df[['x', 'y', 'z']].to_numpy()
+    points = points[~np.isnan(points).any(axis=1)]
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
     centroid = np.mean(points, axis=0)
@@ -148,7 +129,7 @@ def create_ellipsoid_from_point_cloud(csv_file=None):
     sphere.transform(rotation_matrix)
     sphere.translate(centroid)
     wireframe = o3d.geometry.LineSet.create_from_triangle_mesh(sphere)
-    wireframe.paint_uniform_color([0.5, 0.5, 0.5])
+    wireframe.paint_uniform_color([0.6, 0.6, 0.6])
     #o3d.visualization.draw_geometries([pcd, wireframe, bbox])
     return sphere
 

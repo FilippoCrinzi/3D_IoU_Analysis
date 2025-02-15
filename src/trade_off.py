@@ -3,14 +3,15 @@ import trajectory_loader as tl
 import time
 
 
-def trade_off_align(path_obj, path_point_cloud):
-    num_point = [500, 1000, 5000, 7500, 10000, 20000]
+def trade_off_align(path_obj, path_point_cloud_dir, frame, trajectories):
+    num_point = [100, 250, 500, 1000, 2500, 5000, 10000, 15000, 20000]
     values_iou = []
     points = []
     times = []
     for num_points in num_point:
         start_time = time.time()
-        iou_value = iou.align_iou_for_frame(path_obj, path_point_cloud, num_points, False)
+        iou_value = iou.align_iou_for_frame(path_obj, path_point_cloud_dir, num_points, frame,  False)
+        #iou_value = iou.iou_for_frame(path_obj, trajectories, path_point_cloud_dir, frame, num_points, False)
         end_time = time.time()
         times.append(end_time - start_time)
         values_iou.append(iou_value)
@@ -20,8 +21,9 @@ def trade_off_align(path_obj, path_point_cloud):
 
 
 if __name__ == "__main__":
-    point_cloud_time1 = ('/Users/filippocrinzi/Documents/UNIFI/Tesi/3DIoUAnalysis/data/point_clouds'
-                         '/PointCloud_traj_argo_50_AV_MercedesGLS580_scans50_s7_h2_5_10_v3_vehicle_time_43_downsampled_gridAverage_step0.60.csv')
+    point_cloud_dir = '/Users/filippocrinzi/Documents/UNIFI/Tesi/3DIoUAnalysis/data/point_clouds/'
     path_mercedes = '/Users/filippocrinzi/Documents/UNIFI/Tesi/3DIoUAnalysis/data/models/MercedesGLS580.obj'
+    trajectories = ('/Users/filippocrinzi/Documents/UNIFI/Tesi/3DIoUAnalysis/data/trajectories'
+                    '/traj_argo_50_AV_MercedesGLS580_scans50_s7_h2_5_10_v3_vehicle.mat')
 
-    trade_off_align(path_mercedes, point_cloud_time1)
+    trade_off_align(path_mercedes, point_cloud_dir, 29, trajectories)
