@@ -14,24 +14,21 @@ def is_point_inside_mesh(mesh, point):
     triangle_mesh = o3d.t.geometry.TriangleMesh.from_legacy(mesh)
     scene = o3d.t.geometry.RaycastingScene()
     scene.add_triangles(triangle_mesh)
-
     origin = np.array(point)
-    direction = np.array([1.0, 0.0, 0.0])  # Direzione arbitraria lungo X
+    # Direzione arbitraria
+    direction = np.array([1.0, 0.0, 0.0])
     num_intersections = 0
-    epsilon = 1e-6  # Piccolo passo per evitare auto-intersezioni
-
+    # Piccolo passo per evitare auto-intersezioni
+    margin = 1e-6
     while True:
         rays = o3d.core.Tensor([np.concatenate([origin, direction])], dtype=o3d.core.Dtype.Float32)
         ans = scene.cast_rays(rays)
-
-        t_hit = ans['t_hit'].numpy()[0]
-        if np.isinf(t_hit):
+        time_hit = ans['t_hit'].numpy()[0]
+        if np.isinf(time_hit):
             break
-
         num_intersections += 1
-        intersection_point = origin + t_hit * direction
-        origin = intersection_point + epsilon * direction
-
+        intersection_point = origin + time_hit * direction
+        origin = intersection_point + margin * direction
     return num_intersections % 2 == 1
 
 
@@ -63,5 +60,26 @@ def test_is_point_inside_mesh():
     print("Tutti i test sono passati!")
 
 
+def test_is_point_inside_bbox():
+    bbox = o3d.geometry.OrientedBoundingBox(center=[0, 0, 0], R=np.eye(3), extent=[2, 2, 2])
+    points = np.array([
+        [0, 0, 0],   # Dentro
+        [1, 1, 1],   # Dentro
+        [2, 2, 2],   # Fuori
+        [-1, -1, -1], # Dentro
+        [3, 0, 0]    # Fuori
+    ])
+    point_colors = []
+    visualization_points = o3d.geometry.PointCloud()
+    visualization_points.points = o3d.utility.Vector3dVector(points)
+    for i, point in enumerate(points):
+        inside = is_point_inside_bbox(bbox, point)
+        print(f"Punto {point}: {'Dentro' if inside else 'Fuori'}")
+        point_colors.append([0, 1, 0] if inside else [1, 0, 0])  # Verde se dentro, rosso se fuori
+    visualization_points.colors = o3d.utility.Vector3dVector(point_colors)
+    o3d.visualization.draw_geometries([bbox, visualization_points])
+
+
 if __name__ == "__main__":
     test_is_point_inside_mesh()
+    test_is_point_inside_bbox()
