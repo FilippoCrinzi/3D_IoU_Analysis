@@ -149,3 +149,8 @@ def plot_compare_results(frames, iou_values, iou_align_values, num_points, shape
     results_df.to_csv('/Users/filippocrinzi/Documents/UNIFI/Tesi/3DIoUAnalysis/results/compare_results.csv',
                       index=False)
     plt.savefig('/Users/filippocrinzi/Documents/UNIFI/Tesi/3DIoUAnalysis/results/compare_graph.png', dpi=500)
+
+
+def sign_power(base, exp):
+    """ Implementa x^e mantenendo il segno di x per supportare e < 1 """
+    return np.sign(base) * (np.abs(base) ** exp)

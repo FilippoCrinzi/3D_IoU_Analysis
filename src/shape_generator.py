@@ -276,3 +276,141 @@ def visualize_compare(path_point_cloud_dir, path_obj, path_trajectories, frame, 
         o3d.visualization.draw_geometries([wireframe, wireframe_aligned, mesh])
     else:
         print('Shape non riconosciuta')
+
+#Superquadriche
+
+
+def generate_superquadric(a, b, c, epsilon1, epsilon2):
+    num_points = 100
+    theta = np.linspace(-np.pi / 2, np.pi / 2, num_points)  # Parametro verticale
+    phi = np.linspace(0, 2 * np.pi, num_points)  # Parametro orizzontale
+    theta, phi = np.meshgrid(theta, phi)
+
+    x = a * utils.sign_power(np.cos(theta), epsilon1) * utils.sign_power(np.cos(phi), epsilon2)
+    y = b * utils.sign_power(np.cos(theta), epsilon1) * utils.sign_power(np.sin(phi), epsilon2)
+    z = c * utils.sign_power(np.sin(theta), epsilon1)
+
+    return x, y, z  # Restituisce i tre array separati
+
+
+def transform_superquadric(x, y, z, translation, rotation):
+    points = np.vstack((x.ravel(), y.ravel(), z.ravel())).T
+    rotated_points = np.dot(points, rotation)
+    rotated_x = rotated_points[:, 0].reshape(x.shape)
+    rotated_y = rotated_points[:, 1].reshape(y.shape)
+    rotated_z = rotated_points[:, 2].reshape(z.shape)
+    rotated_x += translation[0]
+    rotated_y += translation[1]
+    rotated_z += translation[2]
+    return rotated_x, rotated_y, rotated_z
+
+
+def create_mesh_wireframe(x, y, z):
+    """ Crea una mesh e un wireframe dai punti generati """
+    points = np.vstack((x.ravel(), y.ravel(), z.ravel())).T  # Converte in lista di punti
+
+    # Creazione di facce della mesh usando l'ordinamento dei punti
+    num_points_x = x.shape[0]
+    num_points_y = x.shape[1]
+    faces = []
+
+    for i in range(num_points_x - 1):
+        for j in range(num_points_y - 1):
+            idx1 = i * num_points_y + j
+            idx2 = i * num_points_y + (j + 1)
+            idx3 = (i + 1) * num_points_y + j
+            idx4 = (i + 1) * num_points_y + (j + 1)
+
+            faces.append([idx1, idx2, idx3])  # Primo triangolo
+            faces.append([idx2, idx4, idx3])  # Secondo triangolo
+
+    mesh = o3d.geometry.TriangleMesh()
+    mesh.vertices = o3d.utility.Vector3dVector(points)
+    mesh.triangles = o3d.utility.Vector3iVector(faces)
+    mesh.compute_vertex_normals()
+
+    # Creazione del wireframe
+    edges = []
+    for i in range(num_points_x - 1):
+        for j in range(num_points_y - 1):
+            idx1 = i * num_points_y + j
+            idx2 = i * num_points_y + (j + 1)
+            idx3 = (i + 1) * num_points_y + j
+            idx4 = (i + 1) * num_points_y + (j + 1)
+
+            edges.extend([[idx1, idx2], [idx1, idx3], [idx2, idx4], [idx3, idx4]])
+
+    wireframe = o3d.geometry.LineSet()
+    wireframe.points = o3d.utility.Vector3dVector(points)
+    wireframe.lines = o3d.utility.Vector2iVector(edges)
+    wireframe.paint_uniform_color([0.6, 0.6, 0.6])
+
+    return mesh, wireframe
+
+
+def calculate_semi_axes(points, rotation_matrix):
+    # Step 1: Centrare i punti (traslazione)
+    centroid = np.mean(points, axis=0)
+    centered_points = points - centroid
+
+    # Step 2: Ruotare i punti usando la matrice di rotazione
+    rotated_points = np.dot(centered_points, rotation_matrix.T)  # Ruotiamo i punti
+
+    # Step 3: Calcolare la distanza massima lungo ogni asse principale
+    semi_axes = np.max(np.abs(rotated_points), axis=0)  # Troviamo il massimo lungo ogni asse
+
+    return semi_axes
+
+
+def compute_matrix_M(points):
+    # Calcola il centroide (media delle coordinate)
+    centroid = np.mean(points, axis=0)
+    x0, y0, z0 = centroid
+
+    # Inizializza la matrice M come una matrice 3x3 di zeri
+    M = np.zeros((3, 3))
+
+    # Numero di punti
+    N = points.shape[0]
+
+    # Calcola la matrice M
+    for i in range(N):
+        xi, yi, zi = points[i]
+        dx = xi - x0
+        dy = yi - y0
+        dz = zi - z0
+
+        # Aggiorna la matrice M con i contributi di ciascun punto
+        M[0, 0] += dy**2 + dz**2
+        M[0, 1] += -dy * dx
+        M[0, 2] += -dz * dx
+        M[1, 0] += -dx * dy
+        M[1, 1] += dx**2 + dz**2
+        M[1, 2] += -dz * dy
+        M[2, 0] += -dx * dz
+        M[2, 1] += -dy * dz
+        M[2, 2] += dx**2 + dy**2
+
+    # Normalizza la matrice dividendo per il numero di punti
+    M = M / N
+
+    return M
+
+
+def generate_superquadric_from_point_cloud(csv_file, e1, e2):
+    column_names = ['x', 'y', 'z']
+    df = pd.read_csv(csv_file, header=None, names=column_names)
+    points = df[['x', 'y', 'z']].to_numpy()
+    points = points[~np.isnan(points).any(axis=1)]
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+    centroid = np.mean(points, axis=0)
+    #cov_matrix = np.cov(points.T)  # rappresenta la variazione di ogni variabile rispetto alle altre (inclusa se stessa)
+    M = compute_matrix_M(points)
+    eigenvalues, eigenvectors = np.linalg.eigh(M)
+    a,b,c = calculate_semi_axes(points, eigenvectors.T)
+    x, y, z = generate_superquadric(a, b, c, e1, e2)
+    rotated_x, rotated_y, rotated_z = transform_superquadric(x, y, z, centroid, eigenvectors.T)
+    mesh, wireframe = create_mesh_wireframe(rotated_x, rotated_y, rotated_z)
+    o3d.visualization.draw_geometries([pcd, wireframe])
+    return mesh, wireframe
