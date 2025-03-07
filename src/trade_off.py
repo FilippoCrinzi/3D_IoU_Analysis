@@ -18,7 +18,7 @@ def trade_off(path_obj, path_point_cloud_dir, frame, path_trajectories):
         times.append(t)
         values_iou.append(iou_value)
         start_time = time.time()
-        iou_align_value = iou.align_iou_for_frame2(path_obj, path_trajectories, path_point_cloud_dir, frame, num_points, False)
+        iou_align_value = iou.align_iou_for_frame(path_obj, path_trajectories, path_point_cloud_dir, frame, num_points, False)
         end_time = time.time()
         values_align_iou.append(iou_align_value)
         t_align = end_time - start_time

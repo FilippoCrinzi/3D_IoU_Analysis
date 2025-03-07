@@ -121,7 +121,7 @@ def create_ellipsoid_from_point_cloud(csv_file=None):
     sphere.translate(centroid)
     wireframe = o3d.geometry.LineSet.create_from_triangle_mesh(sphere)
     wireframe.paint_uniform_color([0.6, 0.6, 0.6])
-    #o3d.visualization.draw_geometries([pcd, wireframe, bbox])
+    # o3d.visualization.draw_geometries([pcd, wireframe])
     return sphere
 
 
@@ -343,7 +343,7 @@ def create_mesh_wireframe(x, y, z):
     wireframe = o3d.geometry.LineSet()
     wireframe.points = o3d.utility.Vector3dVector(points)
     wireframe.lines = o3d.utility.Vector2iVector(edges)
-    wireframe.paint_uniform_color([0.6, 0.6, 0.6])
+    wireframe.paint_uniform_color([1, 0, 0])
 
     return mesh, wireframe
 
@@ -405,12 +405,12 @@ def generate_superquadric_from_point_cloud(csv_file, e1, e2):
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
     centroid = np.mean(points, axis=0)
-    #cov_matrix = np.cov(points.T)  # rappresenta la variazione di ogni variabile rispetto alle altre (inclusa se stessa)
     M = compute_matrix_M(points)
     eigenvalues, eigenvectors = np.linalg.eigh(M)
-    a,b,c = calculate_semi_axes(points, eigenvectors.T)
+    a, b, c = calculate_semi_axes(points, eigenvectors.T)
     x, y, z = generate_superquadric(a, b, c, e1, e2)
     rotated_x, rotated_y, rotated_z = transform_superquadric(x, y, z, centroid, eigenvectors.T)
     mesh, wireframe = create_mesh_wireframe(rotated_x, rotated_y, rotated_z)
-    o3d.visualization.draw_geometries([pcd, wireframe])
-    return mesh, wireframe
+    # o3d.visualization.draw_geometries([pcd, wireframe,mesh])
+    return mesh, wireframe, centroid, eigenvectors, [a, b, c], [x, y, z]
+

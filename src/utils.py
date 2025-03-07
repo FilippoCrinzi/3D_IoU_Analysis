@@ -154,3 +154,18 @@ def plot_compare_results(frames, iou_values, iou_align_values, num_points, shape
 def sign_power(base, exp):
     """ Implementa x^e mantenendo il segno di x per supportare e < 1 """
     return np.sign(base) * (np.abs(base) ** exp)
+
+
+def compute_T_matrix(yaw, pitch, roll):
+    """ Calcola la matrice di rotazione T a partire dai valori di yaw, pitch e roll """
+    T = np.zeros((3, 3))
+    T[0, 0] = np.cos(pitch) * np.cos(roll)
+    T[0, 1] = np.cos(pitch) * np.sin(roll)
+    T[0, 2] = -np.sin(pitch)
+    T[1, 0] = np.sin(yaw) * np.sin(pitch) * np.cos(roll) - np.cos(yaw) * np.sin(roll)
+    T[1, 1] = np.sin(yaw) * np.sin(pitch) * np.sin(roll) + np.cos(yaw) * np.cos(roll)
+    T[1, 2] = np.sin(yaw) * np.cos(pitch)
+    T[2, 0] = np.cos(yaw) * np.sin(pitch) * np.cos(roll) + np.sin(yaw) * np.sin(roll)
+    T[2, 1] = np.cos(yaw) * np.sin(pitch) * np.sin(roll) - np.sin(yaw) * np.cos(roll)
+    T[2, 2] = np.cos(yaw) * np.cos(pitch)
+    return T
