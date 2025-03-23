@@ -1,5 +1,5 @@
 import csv
-
+import pandas as pd
 import open3d as o3d
 import numpy as np
 import os
@@ -56,10 +56,10 @@ def iou_for_mesh(mesh1, mesh2, points):
             intersection += 1
         if inside_mesh1 or inside_mesh2:
             union += 1
-    print("Points mesh 1:", points_mesh1)
-    print("Points mesh 2:", points_mesh2)
-    print("Intersection:", intersection)
-    print("Union:", union)
+    # print("Points mesh 1:", points_mesh1)
+    # print("Points mesh 2:", points_mesh2)
+    # print("Intersection:", intersection)
+    # print("Union:", union)
     return intersection / union
 
 
@@ -185,8 +185,8 @@ def iou_superquadric_for_frame(path_obj, path_trajectories, path_point_cloud_dir
     if visualize:
         coordinates = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0, origin=[0, 0, 0])
         print("iou frame -->", iou)
-        wireframe.paint_uniform_color([0, 0.39, 0])
-        o3d.visualization.draw_geometries([wireframe, mesh_veicle, union_bbox, point_cloud_random])
+        wireframe.paint_uniform_color([1, 0.3, 0.3])
+        o3d.visualization.draw_geometries([wireframe, mesh_veicle])
     return iou
 
 
@@ -298,45 +298,57 @@ def align_iou_superquadric_for_frame(path_obj, path_trajectories, path_point_clo
 ########################################################################################################################
 
 
-def normal_iou(path_obj, path_trajectories, path_point_cloud_dir, num_points):
-    num_files = len([f for f in os.listdir(path_point_cloud_dir) if os.path.isfile(os.path.join(path_point_cloud_dir, f))])
+def normal_iou(path_obj, path_trajectories, path_point_cloud_dir, epsilon, num_points):
+    num_files = len([f for f in os.listdir(path_point_cloud_dir) if os.path.isfile(os.path.join(path_point_cloud_dir,
+                                                                                                f))])
     values_bbox = []
     values_ellipsoid = []
-    values_superellisoid = []
+    values_superquadric = []
     frame = []
     for k in range(1, num_files):
         print(f"Frame: {k}")
         iou_bbox = iou_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points, False)
         print("IoU bbox:", iou_bbox)
-        iou_ellipsoid = iou_ellipsoid_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points, False)
+        iou_ellipsoid = iou_ellipsoid_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points,
+                                                False)
         print("IoU ellipsoid:", iou_ellipsoid)
+        iou_superquadric = iou_superquadric_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points,
+                                                      epsilon, False)
+        print("IoU superquadric:", iou_superquadric)
         values_bbox.append(iou_bbox)
         values_ellipsoid.append(iou_ellipsoid)
+        values_superquadric.append(iou_superquadric)
         frame.append(k)
-    (utils.plot_iou_results(frame, values_bbox, values_ellipsoid, num_points))
+    (utils.plot_iou_results(frame, values_bbox, values_ellipsoid, values_superquadric, num_points))
     plt.show()
 
 
-def align_iou(path_obj, path_trajectories, path_point_cloud_dir, num_points):
-    num_files = len([f for f in os.listdir(path_point_cloud_dir) if os.path.isfile(os.path.join(path_point_cloud_dir, f))])
+def align_iou(path_obj, path_trajectories, path_point_cloud_dir, epsilon, num_points):
+    num_files = len([f for f in os.listdir(path_point_cloud_dir) if os.path.isfile(os.path.join(path_point_cloud_dir,
+                                                                                                f))])
     values_bbox = []
     values_ellipsoid = []
-    values_superellisoid = []
+    values_superequadric = []
     frame = []
     for k in range(1, num_files):
         print(f"Frame: {k}")
         iou_bbox = align_iou_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points, False)
         print("IoU bbox:", iou_bbox)
-        iou_ellipsoid = align_iou_ellipsoid_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points, False)
+        iou_ellipsoid = align_iou_ellipsoid_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points,
+                                                      False)
         print("IoU ellipsoid:", iou_ellipsoid)
+        iou_superquadric = align_iou_superquadric_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points,
+                                                      epsilon, False)
+        print("IoU superquadric:", iou_superquadric)
         values_bbox.append(iou_bbox)
         values_ellipsoid.append(iou_ellipsoid)
+        values_superequadric.append(iou_superquadric)
         frame.append(k)
-    utils.plot_iou_align_results(frame, values_bbox, values_ellipsoid, num_points)
+    utils.plot_iou_align_results(frame, values_bbox, values_ellipsoid, values_superequadric, num_points)
     plt.show()
 
 
-def compare_iou(path_obj, path_trajectories, path_point_cloud_dir, num_points, shape):
+def compare_iou(path_obj, path_trajectories, path_point_cloud_dir, num_points, shape, epsilon):
     num_files = len([f for f in os.listdir(path_point_cloud_dir) if os.path.isfile(os.path.join(path_point_cloud_dir, f))])
     iou_values = []
     iou_align_values = []
@@ -346,25 +358,39 @@ def compare_iou(path_obj, path_trajectories, path_point_cloud_dir, num_points, s
             print(f"Frame: {k}")
             iou_bbox = iou_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points, False)
             print("IoU:", iou_bbox)
-            iou_align = align_iou_for_frame(path_obj, path_point_cloud_dir, k, num_points, False)
+            iou_align = align_iou_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points, False)
             print("IoU align:", iou_align)
             iou_align_values.append(iou_align)
             iou_values.append(iou_bbox)
             frame.append(k)
-        utils.plot_compare_results(frame, iou_values, iou_align_values, num_points, shape)
+        utils.plot_compare_results(frame, iou_values, iou_align_values, num_points, shape, epsilon)
         plt.show()
-
     elif shape == 'ellipsoid':
         for k in range(1, num_files):
             print(f"Frame: {k}")
             iou = iou_ellipsoid_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points, False)
             print("IoU:", iou)
-            iou_align = align_iou_ellipsoid_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points, False)
+            iou_align = align_iou_ellipsoid_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points,
+                                                      False)
             print("IoU align:", iou_align)
             iou_align_values.append(iou_align)
             iou_values.append(iou)
             frame.append(k)
-        utils.plot_compare_results(frame, iou_values, iou_align_values, num_points, shape)
+        utils.plot_compare_results(frame, iou_values, iou_align_values, num_points, shape, epsilon)
+        plt.show()
+    elif shape == 'superquadric':
+        for k in range(1, num_files):
+            print(f"Frame: {k}")
+            iou = iou_superquadric_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k, num_points, epsilon,
+                                             False)
+            print("IoU:", iou)
+            iou_align = align_iou_superquadric_for_frame(path_obj, path_trajectories, path_point_cloud_dir, k,
+                                                         num_points, epsilon, False)
+            print("IoU align:", iou_align)
+            iou_align_values.append(iou_align)
+            iou_values.append(iou)
+            frame.append(k)
+        utils.plot_compare_results(frame, iou_values, iou_align_values, num_points, shape, epsilon)
         plt.show()
     else:
         print("Shape not recognized")
@@ -392,22 +418,40 @@ def superquadric_iou_all_frames(path_obj, path_trajectories, path_point_cloud_di
 
 
 def superquadric_iou_all_combination(path_obj, path_trajectories, path_point_cloud_dir, num_points):
-    epsilon1_values = np.arange(0.2, 0.3, 0.2)
-    epsilon2_values = np.arange(0.2, 0.3, 0.2)
+    epsilon1_values = np.arange(0.1, 1.3, 0.1)
+    epsilon2_values = np.arange(0.1, 1.3, 0.1)
     results = []
+    mean_iou_matrix = []
+
+    num_files = len(
+        [f for f in os.listdir(path_point_cloud_dir) if os.path.isfile(os.path.join(path_point_cloud_dir, f))])
     output_dir = '/Users/filippocrinzi/Documents/UNIFI/Tesi/3DIoUAnalysis/results/'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     output_file = os.path.join(output_dir, 'epsilon_analysis.csv')
-
+    summary_file = os.path.join(output_dir, 'epsilon_summary.csv')
+    # Creazione del file CSV con tutti gli IoU per ogni frame
     with open(output_file, mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['epsilon1', 'epsilon2'] + [f'frame{frame}' for frame in range(1, 51)])
+        writer.writerow(['epsilon1', 'epsilon2'] + [f'{frame}' for frame in range(1, num_files)])
+
         for epsilon1 in epsilon1_values:
+            row_means = []  # Per salvare la media degli IoU di una riga nella tabella aggregata
             for epsilon2 in epsilon2_values:
+                print(f"epsilon1: {epsilon1}, epsilon2: {epsilon2}")
                 frame, iou_values = superquadric_iou_all_frames(path_obj, path_trajectories, path_point_cloud_dir,
                                                                 num_points, (epsilon1, epsilon2))
+                mean_iou = np.mean(iou_values) if iou_values else 0
+                row_means.append(mean_iou)
                 row = [epsilon1, epsilon2] + iou_values
                 results.append(row)
                 writer.writerow(row)
-    return np.array(results)
+            mean_iou_matrix.append([epsilon1] + row_means)
+    # Creazione del file CSV per la tabella con le medie
+    with open(summary_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['epsilon'] + list(epsilon2_values))  # Intestazione con epsilon2
+        writer.writerows(mean_iou_matrix)
+    df = pd.DataFrame(mean_iou_matrix, columns=['epsilon'] + list(epsilon2_values))
+    print(df)
+    return np.array(results), df

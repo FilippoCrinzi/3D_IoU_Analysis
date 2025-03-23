@@ -231,7 +231,7 @@ def align_ellipsoid_to_mesh(x, y, z, heading, ellipsoid):
     ellipsoid.rotate(rotation_matrix, center=(x, y, z))
 
 
-def visualize_compare(path_point_cloud_dir, path_obj, path_trajectories, frame, shape):
+def visualize_compare(path_point_cloud_dir, path_obj, path_trajectories, frame, shape, epsilon):
     if shape == 'bbox':
         point_cloud_files = utils.sort_directory_files(path_point_cloud_dir)
         mesh = o3d.io.read_triangle_mesh(path_obj)
@@ -270,10 +270,35 @@ def visualize_compare(path_point_cloud_dir, path_obj, path_trajectories, frame, 
         mesh.translate(translation)
         align_ellipsoid_to_mesh(x, y, z, heading, ellipsoid_aligned)
         wireframe = o3d.geometry.LineSet.create_from_triangle_mesh(ellipsoid)
-        wireframe.paint_uniform_color([1, 0, 0])
+        wireframe.paint_uniform_color([1, 0.3, 0.3])
         wireframe_aligned = o3d.geometry.LineSet.create_from_triangle_mesh(ellipsoid_aligned)
-        wireframe_aligned.paint_uniform_color([0, 0, 1])
+        wireframe_aligned.paint_uniform_color([0, 1, 0])
         o3d.visualization.draw_geometries([wireframe, wireframe_aligned, mesh])
+    elif shape == 'superquadric':
+        point_cloud_files = utils.sort_directory_files(path_point_cloud_dir)
+        mesh_veicle = o3d.io.read_triangle_mesh(path_obj)
+        file_name = point_cloud_files[frame - 1]
+        path_point_cloud = os.path.join(path_point_cloud_dir, file_name)
+        position = (utils.get_vehicle_position(path_trajectories, frame - 1))
+        x, y, _, _, heading = position
+        z = 1.03
+        pi_mezzi = np.radians(90)
+        rotation_matrix = mesh_veicle.get_rotation_matrix_from_xyz([pi_mezzi, pi_mezzi + heading, 0])
+        mesh_veicle.rotate(rotation_matrix, center=mesh_veicle.get_center())
+        translation = np.array([x, y, z]) - mesh_veicle.get_center()
+        mesh_veicle.translate(translation)
+        mesh, wireframe,_,_,_,_ = generate_superquadric_from_point_cloud(path_point_cloud, epsilon[0], epsilon[1])
+        mesh_aligned, wireframe_aligned, _, _, _, vectors = generate_superquadric_from_point_cloud(path_point_cloud, epsilon[0], epsilon[1])
+        rotation_superquadric = np.array([
+            [np.cos(-heading), -np.sin(-heading), 0],
+            [np.sin(-heading), np.cos(-heading), 0],
+            [0, 0, 1]
+        ])
+        vectors = transform_superquadric(vectors[0], vectors[1], vectors[2], [x, y, z], rotation_superquadric)
+        mesh_superquadric, wireframe_aligned = create_mesh_wireframe(vectors[0], vectors[1], vectors[2])
+        wireframe_aligned.paint_uniform_color([0, 1, 0])
+        wireframe.paint_uniform_color([1, 0.3, 0.3])
+        o3d.visualization.draw_geometries([wireframe_aligned, wireframe, mesh_veicle])
     else:
         print('Shape non riconosciuta')
 
