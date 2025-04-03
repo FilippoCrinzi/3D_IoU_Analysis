@@ -436,6 +436,7 @@ def generate_superquadric_from_point_cloud(csv_file, e1, e2):
     x, y, z = generate_superquadric(a, b, c, e1, e2)
     rotated_x, rotated_y, rotated_z = transform_superquadric(x, y, z, centroid, eigenvectors.T)
     mesh, wireframe = create_mesh_wireframe(rotated_x, rotated_y, rotated_z)
+    # wireframe.paint_uniform_color([0.7, 0.7, 0.7])
     # o3d.visualization.draw_geometries([pcd, wireframe,mesh])
     return mesh, wireframe, centroid, eigenvectors, [a, b, c], [x, y, z]
 
